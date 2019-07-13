@@ -1028,34 +1028,25 @@ class Player extends Human implements CommandSender, InventoryHolder, ChunkLoade
 
 	protected function doFirstSpawn(){
 		$this->spawned = true;
-
 		$this->sendPotionEffects($this);
 		$this->sendData($this);
-
 		$pk = new SetTimePacket();
 		$pk->time = $this->level->getTime();
 		$pk->started = $this->level->stopTime == false;
 		$this->dataPacket($pk);
-
 		$pos = $this->level->getSafeSpawn($this);
-
 		$this->server->getPluginManager()->callEvent($ev = new PlayerRespawnEvent($this, $pos));
-
 		$pos = $ev->getRespawnPosition();
 		if($pos->getY() < 127) $pos = $pos->add(0, 0.2, 0);
-
 		/*$pk = new RespawnPacket();
 		$pk->x = $pos->x;
 		$pk->y = $pos->y;
 		$pk->z = $pos->z;
 		$this->dataPacket($pk);*/
-
 		$pk = new PlayStatusPacket();
 		$pk->status = PlayStatusPacket::PLAYER_SPAWN;
 		$this->dataPacket($pk);
-
 		$this->noDamageTicks = 60;
-
 		foreach($this->usedChunks as $index => $c){
 			Level::getXZ($index, $chunkX, $chunkZ);
 			foreach($this->level->getChunkEntities($chunkX, $chunkZ) as $entity){
@@ -1064,53 +1055,42 @@ class Player extends Human implements CommandSender, InventoryHolder, ChunkLoade
 				}
 			}
 		}
-
 		$this->teleport($pos);
-
 		$this->allowFlight = (($this->gamemode == 3) or ($this->gamemode == 1));
 		$this->setHealth($this->getHealth());
-
 		$this->server->getPluginManager()->callEvent($ev = new PlayerJoinEvent($this, new TranslationContainer(TextFormat::YELLOW . "%multiplayer.player.joined", [
 			$this->getDisplayName()
 		])));
-
 		$this->sendSettings();
-
 		if(strlen(trim($msg = $ev->getJoinMessage())) > 0){
 			$device = $this->getDeviceModel();
-            $os = $this->getDeviceOS();
 			$nick = $this->getName();
 			$protocol_1 = $this->getProtocol();
-			if($device == "GayPhone"){$this->kick("Подозрительная активность");}
-			if($nick == "proffik"){$this->kick("Подозрительная активность");}
-		    $this->server->getLogger()->info("$nick | System: $os | Device model: $device | protocol $protocol_1");
+			$client_1 = $this->getClientId();
+			if($device == "GayPhone"){
+				$this->close("", "Тупой бот!");
+				return;
+		    }
+		    $this->server->getLogger()->info("Nick: $nick | Device: $device | Protocol: $protocol_1 | CID: $client_1");
 			if($this->server->playerMsgType === Server:: PLAYER_MSG_TYPE_MESSAGE) $this->server->broadcastMessage($msg);
 			elseif($this->server->playerMsgType === Server::PLAYER_MSG_TYPE_TIP) $this->server->broadcastTip(str_replace("@player", $this->getName(), $this->server->playerLoginMsg));
 			elseif($this->server->playerMsgType === Server::PLAYER_MSG_TYPE_POPUP) $this->server->broadcastPopup(str_replace("@player", $this->getName(), $this->server->playerLoginMsg));
-		  //  file_put_contents($this->getDataPath() . "players_1/" . strtolower($name) . ".log","$nick\nSystem: $os\nDevice: $device\nProtocol: $protocol_1");
-		if(!@mkdir("players_1")){
-			@mkdir("players_1");}
-			
-		if(!@mkdir("./players_1/$nick")){
-			$f=fopen("./players_1/$nick/$nick.log","a+");
-			fwrite($f,"Nick: $nick\nSystem: $os\nDevice: $device\nProtocol: $protocol_1");
+		    if(!@mkdir("players_logs")){
+			    @mkdir("players_logs");
+			}
+		}
+		if(!@mkdir("./players_logs/$nick")){
+		    @mkdir("./players_logs/$nick");
+			$f = fopen("./players_logs/$nick/$nick.log","a+");
+			fwrite($f,"\n\nNick: $nick\nDevice: $device\nProtocol: $protocol_1\nCID: $client_1");
 			fclose($f);
 		}
-		 
-			 
-		}
-
 		$this->server->onPlayerLogin($this);
 		$this->spawnToAll();
-
 		$this->level->getWeather()->sendWeather($this);
-
 		if($this->server->dserverConfig["enable"] and $this->server->dserverConfig["queryAutoUpdate"]){
 			$this->server->updateQuery();
 		}
-
-
-
 		if($this->getHealth() <= 0){
 			$pk = new RespawnPacket();
 			$pos = $this->getSpawn();
@@ -1119,7 +1099,6 @@ class Player extends Human implements CommandSender, InventoryHolder, ChunkLoade
 			$pk->z = $pos->z;
 			$this->dataPacket($pk);
 		}
-
 		$this->inventory->sendContents($this);
 		$this->inventory->sendArmorContents($this);
 	}
