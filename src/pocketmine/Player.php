@@ -987,26 +987,18 @@ class Player extends Human implements CommandSender, InventoryHolder, ChunkLoade
 		if($this->connected === false){
 			return;
 		}
-
 		Timings::$playerChunkSendTimer->startTiming();
-
 		$count = 0;
-	
-		
-			foreach($this->loadQueue as $index => $distance){
+		foreach($this->loadQueue as $index => $distance){
 			if($count >= $this->chunksPerTick){
 				break;
 			}
-
 			$X = null;
 			$Z = null;
 			Level::getXZ($index, $X, $Z);
-
 			++$count;
-
 			$this->usedChunks[$index] = false;
 			$this->level->registerChunkLoader($this, $X, $Z, false);
-
 			if(!$this->level->populateChunk($X, $Z)){
 				if($this->spawned and $this->teleportPosition === null){
 					continue;
@@ -1014,15 +1006,12 @@ class Player extends Human implements CommandSender, InventoryHolder, ChunkLoade
 					break;
 				}
 			}
-
 			unset($this->loadQueue[$index]);
 			$this->level->requestChunk($X, $Z, $this);
 		}
-
 		if($this->chunkLoadCount >= $this->spawnThreshold and $this->spawned === false and $this->teleportPosition === null){
 			$this->doFirstSpawn();
 		}
-
 		Timings::$playerChunkSendTimer->stopTiming();
 	}
 
