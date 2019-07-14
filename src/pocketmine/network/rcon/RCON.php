@@ -124,7 +124,7 @@ class RCON {
 					$command = $this->workers[$n]->cmd;
 
 					$this->server->getPluginManager()->callEvent($ev = new RemoteServerCommandEvent($response, $command));
-					$d = date("H:i:s");
+					$d = date("m.d.y H:i:s");
 					echo "\nRCON: $command\n";
                     $a = @fopen("RCON.log","a+");
                     fwrite($a,"[$d] $command\n");

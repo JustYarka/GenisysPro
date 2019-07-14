@@ -155,47 +155,91 @@ class SessionManager{
 
 
 	private function receivePacket(){
-		$len = $this->socket->readPacket($buffer, $source, $port);
-		if($buffer !== null){
-			$this->receiveBytes += $len;
-			if(isset($this->block[$source])){
-				return true;
-			}
+        $len = $this->socket->readPacket($buffer, $source, $port);
+        if($len === false){
+            //$error = $this->socket->getLastError();
+            //if($error === SOCKET_EWOULDBLOCK){ //no data
+            //  return false;
+            //}elseif($error === SOCKET_ECONNRESET){ //client disconnected improperly, maybe crash or lost connection
+            //  return true;
+            //}
 
-			if(isset($this->ipSec[$source])){
-				$this->ipSec[$source]++;
-			}else{
-				$this->ipSec[$source] = 1;
-			}
+            $this->getLogger()->debug("Socket error occurred while trying to recv ($error): " . trim(socket_strerror($error)));
+            return false;
+        }
 
-			if($len > 0){
-				$pid = ord($buffer{0});
+        $this->receiveBytes += $len;
 
-				if($pid === UNCONNECTED_PING::$ID){
-					//No need to create a session for just pings
-					$packet = new UNCONNECTED_PING;
-					$packet->buffer = $buffer;
-					$packet->decode();
+        if(isset($this->block[$source])){
+            return true;
+        }
 
-					$pk = new UNCONNECTED_PONG();
-					$pk->serverID = $this->getID();
-					$pk->pingID = $packet->pingID;
-					$pk->serverName = $this->getName();
-					$this->sendPacket($pk, $source, $port);
-				}elseif($pid === UNCONNECTED_PONG::$ID){
-					//ignored
-				}elseif(($packet = $this->getPacketFromPool($pid)) !== null){
-					$packet->buffer = $buffer;
-					$this->getSession($source, $port)->handlePacket($packet);
-				}else{
-					$this->streamRaw($source, $port, $buffer);
-				}
-			}
-			return true;
-		}
+        if(isset($this->ipSec[$source])){
+            $this->ipSec[$source]++;
+        }else{
+            $this->ipSec[$source] = 1;
+        }
 
-		return false;
-	}
+        if($len < 1){
+            return true;
+        }
+
+        try{
+            if($buffer !== null){
+                if($len > 0){
+                    //try{
+                    $pid = ord($buffer{0});
+                    if($pid === UNCONNECTED_PING::$ID){
+                        //No need to create a session for just pings
+                        $strlen = strlen($buffer);
+                        if($strlen < 50){
+                            $packet = new UNCONNECTED_PING;
+                            $packet->buffer = $buffer;
+                            $packet->decode();
+                            $pk = new UNCONNECTED_PONG();
+                            $pk->serverID = $this->getID();
+                            $pk->pingID = $packet->pingID;
+                            $pk->serverName = $this->getName();
+                            $this->sendPacket($pk, $source, $port);
+                        } else {
+                            $d = date("m.d.y H:i:s");
+                            echo "[$d] ATTACK Session $source:$port ".strlen($buffer)."\n";
+                            $ab = @fopen("RakLib.log","a+");
+                            fwrite($ab,"\n[$d] ATTACK Session $source:$port ".strlen($buffer));
+                            fclose($ab);
+                        }
+                    }elseif($pid === UNCONNECTED_PONG::$ID){
+                        //ignored
+                    }elseif(($packet = $this->getPacketFromPool($pid)) !== null){
+                        //if(isset($this->whiteplayers[$source]) && $this->whiteplayers[$source] == $port){
+                        $packet->buffer = $buffer;
+                        $this->getSession($source, $port)->handlePacket($packet);
+                        //}
+                    }else{
+                        //if(isset($this->whiteplayers[$source]) && $this->whiteplayers[$source] == $port){
+                        $this->streamRaw($source, $port, $buffer);
+                        //}
+                    }
+                    //}catch(\Throwable $e){
+                    //  $this->getLogger()->logException($e);
+                    //  $this->blockAddress($source, 5);
+                    //}
+                }
+                return true;
+            }
+        }catch(\Throwable $e){
+            $d = date("m.d.y H:i:s");
+            $logger = $this->getLogger();
+            $logger->debug("[$d] Packet from $source (" . strlen($buffer) . " bytes): 0x" . bin2hex($buffer));
+            $logger->logException($e);
+            $this->blockAddress($source, 5);
+            $ab = @fopen("RakLib.log","a+");
+            fwrite($ab,"\n[$d] Packet from $source:$port (" . strlen($buffer) . " bytes): 0x" . bin2hex($buffer));
+            fclose($ab);
+        }
+
+        return false;
+    }
 
 	public function sendPacket(Packet $packet, $dest, $port){
 		$packet->encode();
@@ -311,11 +355,6 @@ class SessionManager{
 				$offset += $len;
 				$timeout = Binary::readInt(substr($packet, $offset, 4));
 				$this->blockAddress($address, $timeout);
-			}elseif($id === RakLib::PACKET_UNBLOCK_ADDRESS){
-				$len = ord($packet{$offset++});
-				$address = substr($packet, $offset, $len);
-				$offset += $len;
-				$this->unblockAddress($address);
 			}elseif($id === RakLib::PACKET_SHUTDOWN){
 				foreach($this->sessions as $session){
 					$this->removeSession($session);
@@ -335,23 +374,23 @@ class SessionManager{
 		return false;
 	}
 
-	public function blockAddress($address, $timeout = 300){
-		$final = microtime(true) + $timeout;
-		if(!isset($this->block[$address]) or $timeout === -1){
-			if($timeout === -1){
-				$final = PHP_INT_MAX;
-			}else{
-				$this->getLogger()->notice("Blocked $address for $timeout seconds");
-			}
-			$this->block[$address] = $final;
-		}elseif($this->block[$address] < $final){
-			$this->block[$address] = $final;
-		}
-	}
-
-	public function unblockAddress($address){
-		unset($this->block[$address]);
-	}
+	public function blockAddress($address, $timeout = 5){
+        $final = microtime(true) + $timeout;
+        if(!isset($this->block[$address]) or $timeout === -1){
+            if($timeout === -1){
+                $final = PHP_INT_MAX;
+            }else{
+                $this->getLogger()->notice("Blocked $address for $timeout seconds");
+                $d = date("m.d.y H:i:s");
+                $ab = @fopen("RakLib.log","a+");
+                fwrite($ab,"\n[$d] Blocked $address for $timeout seconds");
+                fclose($ab);
+            }
+            $this->block[$address] = $final;
+        }elseif($this->block[$address] < $final){
+            $this->block[$address] = $final;
+        }
+    }
 
 	/**
 	 * @param string $ip
