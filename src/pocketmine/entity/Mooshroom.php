@@ -32,7 +32,7 @@ class Mooshroom extends Animal {
 
 	public $width = 0.3;
 	public $length = 0.9;
-	public $height = 1.8;
+	public $height = 0;
 
 	/**
 	 * @return string

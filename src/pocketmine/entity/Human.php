@@ -71,7 +71,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder {
 
 	public $width = 0.6;
 	public $length = 0.6;
-	public $height = 1.8;
+	public $height = 0;
 	public $eyeHeight = 1.62;
 
 	protected $skinId;
