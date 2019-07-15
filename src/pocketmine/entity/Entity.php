@@ -986,6 +986,9 @@ abstract class Entity extends Location implements Metadatable {
 	 * @param Player $player
 	 */
 	public function spawnTo(Player $player){
+		if(isset($this->hasSpawned[$player->getLoaderId()])){
+			$this->despawnFrom($player);
+		}
 		if(!isset($this->hasSpawned[$player->getLoaderId()]) and isset($player->usedChunks[Level::chunkHash($this->chunk->getX(), $this->chunk->getZ())])){
 			$this->hasSpawned[$player->getLoaderId()] = $player;
 		}
