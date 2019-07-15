@@ -34,7 +34,6 @@ class Sapling extends Flowable {
 	const JUNGLE = 3;
 	const ACACIA = 4;
 	const DARK_OAK = 5;
-	const HUI = 6;
 
 	protected $id = self::SAPLING;
 
@@ -65,8 +64,8 @@ class Sapling extends Flowable {
 			3 => "Jungle Sapling",
 			4 => "Acacia Sapling",
 			5 => "Dark Oak Sapling",
-			6 => "Hui Sapling",
-			7 => "",
+			6 => "",
+			7 => "" // 7 => "",
 		];
 		return $names[$this->meta & 0x07];
 	}
