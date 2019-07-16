@@ -26,6 +26,7 @@ use pocketmine\entity\Item as ItemEntity;
 use pocketmine\math\Vector3;
 use pocketmine\network\protocol\AddEntityPacket;
 use pocketmine\network\protocol\RemoveEntityPacket;
+use pocketmine\utils\UUID;
 
 class FloatingTextParticle extends Particle {
 	//TODO: HACK!
@@ -34,6 +35,7 @@ class FloatingTextParticle extends Particle {
 	protected $title;
 	protected $entityId;
 	protected $invisible = false;
+	public $x, $y, $z;
 
 	/**
 	 * @param Vector3 $pos
@@ -44,20 +46,9 @@ class FloatingTextParticle extends Particle {
 		parent::__construct($pos->x, $pos->y, $pos->z);
 		$this->text = $text;
 		$this->title = $title;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getText(){
-		return $this->text;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getTitle(){
-		return $this->title;
+		$this->x = $pos->x;
+		$this->y = $pos->y;
+		$this->z = $pos->z;
 	}
 
 	/**
@@ -107,15 +98,17 @@ class FloatingTextParticle extends Particle {
 
 			$pk = new AddEntityPacket();
 			$pk->eid = $this->entityId;
-			$pk->type = ItemEntity::NETWORK_ID;
+			$pk->uuid = UUID::fromRandom();
+			$pk->username = $this->title;
 			$pk->x = $this->x;
-			$pk->y = $this->y - 0.75;
+			$pk->y = $this->y - 0.50;
 			$pk->z = $this->z;
 			$pk->speedX = 0;
 			$pk->speedY = 0;
 			$pk->speedZ = 0;
-			$pk->yaw = 0;
-			$pk->pitch = 0;
+			$pk->yaw = 0.0;
+			$pk->pitch = 0.0;
+			$pk->item = Item::get(0);
 			$flags = (
 				(1 << Entity::DATA_FLAG_CAN_SHOW_NAMETAG) |
 				(1 << Entity::DATA_FLAG_ALWAYS_SHOW_NAMETAG) |
@@ -124,7 +117,7 @@ class FloatingTextParticle extends Particle {
 			$pk->metadata = [
 				Entity::DATA_FLAGS => [Entity::DATA_TYPE_LONG, $flags],
 				Entity::DATA_NAMETAG => [Entity::DATA_TYPE_STRING, $this->title . ($this->text !== "" ? "\n" . $this->text : "")],
-				Entity::DATA_SCALE => [Entity::DATA_TYPE_FLOAT, 0],
+				Entity::DATA_SCALE => [Entity::DATA_TYPE_FLOAT, 0.0],
 			];
 
 			$p[] = $pk;
