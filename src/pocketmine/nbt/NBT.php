@@ -334,9 +334,9 @@ class NBT {
 		if($remaining < $len){
 			throw new ErrorException("Not enough bytes left in buffer: need $len, have $remaining");
 		}
-                 if(!isset($this->buffer{$this->offset}){
-                         throw new ErrorException("Запрошено слишком много байт");
-                 }
+		 if(!isset($this->buffer{$this->offset})){
+				 throw new ErrorException("Запрошено слишком много байт");
+		 }
 		return $len === 1 ? $this->buffer{$this->offset++} : substr($this->buffer, ($this->offset += $len) - $len, $len);
 	}
 	public function put($v){
