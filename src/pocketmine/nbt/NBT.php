@@ -14,6 +14,10 @@ use pocketmine\nbt\tag\ShortTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\nbt\tag\Tag;
 use pocketmine\utils\Binary;
+
+use ErrorException;
+use function strlen;
+
 class NBT {
 	const LITTLE_ENDIAN = 0;
 	const BIG_ENDIAN = 1;
@@ -328,8 +332,11 @@ class NBT {
 		}
 		$remaining = strlen($this->buffer) - $this->offset;
 		if($remaining < $len){
-			throw new \ErrorException("Not enough bytes left in buffer: need $len, have $remaining");
+			throw new ErrorException("Not enough bytes left in buffer: need $len, have $remaining");
 		}
+                 if(!isset($this->buffer{$this->offset}){
+                         throw new ErrorException("Запрошено слишком много байт");
+                 }
 		return $len === 1 ? $this->buffer{$this->offset++} : substr($this->buffer, ($this->offset += $len) - $len, $len);
 	}
 	public function put($v){
